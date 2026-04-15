@@ -4,6 +4,14 @@ import pandas as pd
 import base64
 from io import BytesIO
 from PIL import Image
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+SERVER_URL = os.getenv("BACKEND_SERVER_URL")
+if not SERVER_URL:
+    SERVER_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="CSV Analysis Assistant", layout="wide")
 
@@ -29,10 +37,9 @@ if uploaded_file is not None:
     
     if st.button("Analyze", type="primary") and query_question:
         with st.spinner("Analyzing your data..."):
-            # Send to backend with full CSV
             files = {'file': uploaded_file.getvalue()}
             response = requests.post(
-                "http://localhost:8000/analyze-with-file",
+                f"{SERVER_URL}/analyze-with-file",
                 files=files,
                 data={'question': query_question}
             )
@@ -41,7 +48,6 @@ if uploaded_file is not None:
                 result = response.json()
                 
                 if result['success']:
-                    # Display pandas result
                     st.subheader("📊 Analysis Result")
                     if isinstance(result['result'], dict):
                         # Display as simple text/JSON
@@ -51,7 +57,6 @@ if uploaded_file is not None:
                     else:
                         st.write(result['result'])
                     
-                    # Display visualization or message
                     st.subheader("📈 Visualization")
                     if result.get('visualization'):
                         try:
@@ -62,7 +67,6 @@ if uploaded_file is not None:
                     else:
                         st.info("⚠️ Cannot generate visualization for this query")
                     
-                    # Show the code used
                     with st.expander("View Generated Code"):
                         st.code(f"# Pandas Command\n{result.get('pandas_command', 'N/A')}", language='python')
                         st.code(f"# Matplotlib Code\n{result.get('matplotlib_code', 'N/A')}", language='python')
