@@ -1,5 +1,4 @@
 from fastapi import FastAPI, UploadFile, File, Form
-from typing import List, Dict, Any
 import pandas as pd
 import io
 import matplotlib
@@ -14,7 +13,6 @@ from pandas_runner import PandasRunner
 app = FastAPI()
 
 def generate_visualization(matplotlib_code, df, execution_result):
-
     try:
         fig, ax = plt.subplots(figsize=(10, 6))
         
@@ -39,8 +37,7 @@ def generate_visualization(matplotlib_code, df, execution_result):
         
         return image_base64
         
-    except Exception as e:
-        print(f"Visualization error: {e}")
+    except Exception:
         return None
 
 @app.post("/analyze-with-file")
@@ -57,8 +54,6 @@ async def analyze_with_file(
         
         commands_dict = get_analysis_commands(question, columns, sample_rows)
         
-        print(f"Commands dict: {commands_dict}")
-        
         if not commands_dict:
             return {
                 'success': False,
@@ -71,9 +66,6 @@ async def analyze_with_file(
         
         pandas_command = commands_dict.get('pandas', '')
         matplotlib_code = commands_dict.get('matplotlib', '')
-        
-        print(f"Pandas command: {pandas_command}")
-        print(f"Matplotlib code: {matplotlib_code}")
         
         runner = PandasRunner(df)
         execution_result = runner.execute_command(pandas_command)
@@ -110,9 +102,6 @@ async def analyze_with_file(
         return response_data
         
     except Exception as e:
-        print(f"Exception: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return {
             'success': False,
             'error': str(e),

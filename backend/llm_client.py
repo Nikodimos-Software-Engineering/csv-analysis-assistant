@@ -18,17 +18,30 @@ Question: {question}
 You MUST respond with ONLY a valid JSON dictionary in this exact format:
 {{"pandas": "your pandas command here", "matplotlib": "your matplotlib code here"}}
 
-Rules:
-1. ALWAYS include both pandas and matplotlib keys
-2. If visualization is NOT possible, set matplotlib to empty string: ""
-3. For count/distribution questions, create a bar chart or pie chart
-4. For numeric questions, create a histogram or box plot
-5. Return ONLY the JSON, no other text
+CRITICAL RULES for pandas commands:
+1. MUST be a valid Python expression that can be evaluated
+2. Use 'df' as the DataFrame variable name
+3. Examples of VALID commands:
+   - "df['category'].value_counts()"
+   - "df['value'].mean()"
+   - "df.groupby('category')['value'].sum()"
+   - "df[df['value'] > 10]"
+4. Do NOT include print statements
+5. Do NOT include assignment statements (like 'result = ...')
+6. Do NOT include comments
+
+For matplotlib code:
+1. Use the existing 'df' DataFrame
+2. Include plt.show() or plt.savefig() at the end
+3. Set appropriate labels and titles
+4. If visualization is NOT possible, set matplotlib to empty string: ""
 
 Examples:
-For count question: {{"pandas": "df['category'].value_counts()", "matplotlib": "plt.figure(figsize=(10,6)); df['category'].value_counts().plot(kind='bar'); plt.title('Distribution'); plt.xticks(rotation=45); plt.tight_layout()"}}
+For count question: 
+{{"pandas": "df['category'].value_counts()", "matplotlib": "plt.figure(figsize=(10,6)); df['category'].value_counts().plot(kind='bar'); plt.title('Distribution by Category'); plt.xlabel('Category'); plt.ylabel('Count'); plt.xticks(rotation=45); plt.tight_layout()"}}
 
-For mean question: {{"pandas": "df['age'].mean()", "matplotlib": "plt.figure(figsize=(8,6)); plt.hist(df['age'], bins=20, edgecolor='black'); plt.title('Age Distribution'); plt.xlabel('Age'); plt.ylabel('Frequency'); plt.grid(True, alpha=0.3)"}}
+For mean question: 
+{{"pandas": "df['value'].mean()", "matplotlib": "plt.figure(figsize=(8,6)); plt.hist(df['value'], bins=20, edgecolor='black'); plt.title('Value Distribution'); plt.xlabel('Value'); plt.ylabel('Frequency'); plt.grid(True, alpha=0.3)"}}
 
 Return ONLY the JSON dictionary, no other text."""
 
@@ -40,7 +53,7 @@ Return ONLY the JSON dictionary, no other text."""
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3,
+        "temperature": 0.1,
         "max_tokens": 500
     }
 
@@ -51,38 +64,43 @@ Return ONLY the JSON dictionary, no other text."""
             result = response.json()
             content = result['choices'][0]['message']['content']
             
-            print(f"Raw LLM response: {content}")
-            
-            # Try to parse as JSON
             try:
                 json_match = re.search(r'\{.*\}', content, re.DOTALL)
                 if json_match:
                     content = json_match.group()
                 commands = json.loads(content)
                 
-                # Ensure both keys exist
                 if 'pandas' not in commands:
                     commands['pandas'] = ''
                 if 'matplotlib' not in commands:
                     commands['matplotlib'] = ''
+                
+                pandas_cmd = commands['pandas']
+                pandas_cmd = re.sub(r'^```python\s*', '', pandas_cmd)
+                pandas_cmd = re.sub(r'\s*```$', '', pandas_cmd)
+                pandas_cmd = pandas_cmd.strip()
+                
+                if pandas_cmd.startswith('print('):
+                    import_match = re.search(r'print\((.*)\)', pandas_cmd)
+                    if import_match:
+                        pandas_cmd = import_match.group(1)
+                
+                commands['pandas'] = pandas_cmd
                     
                 return commands
-            except json.JSONDecodeError as e:
-                print(f"JSON parse error: {e}")
+            except json.JSONDecodeError:
                 return {
                     'pandas': content.strip(),
                     'matplotlib': ''
                 }
         else:
-            print(f"API error: {response.status_code} - {response.text}")
             return {
                 'pandas': f"Error: {response.status_code}",
                 'matplotlib': ''
             }
             
-    except Exception as e:
-        print(f"Exception: {type(e).__name__}: {e}")
+    except Exception:
         return {
-            'pandas': f"Error: {str(e)}",
+            'pandas': "Error: Failed to get response from LLM",
             'matplotlib': ''
         }

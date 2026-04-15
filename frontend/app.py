@@ -50,7 +50,6 @@ if uploaded_file is not None:
                 if result['success']:
                     st.subheader("📊 Analysis Result")
                     if isinstance(result['result'], dict):
-                        # Display as simple text/JSON
                         st.json(result['result'])
                     elif isinstance(result['result'], (int, float)):
                         st.metric("Result", result['result'])
@@ -62,8 +61,8 @@ if uploaded_file is not None:
                         try:
                             image = Image.open(BytesIO(base64.b64decode(result['visualization'])))
                             st.image(image, width=700)
-                        except Exception as e:
-                            st.error(f"Failed to display visualization: {e}")
+                        except Exception:
+                            st.error("Failed to display visualization")
                     else:
                         st.info("⚠️ Cannot generate visualization for this query")
                     
@@ -72,5 +71,8 @@ if uploaded_file is not None:
                         st.code(f"# Matplotlib Code\n{result.get('matplotlib_code', 'N/A')}", language='python')
                 else:
                     st.error(f"Analysis failed: {result.get('error')}")
+                    if result.get('pandas_command'):
+                        with st.expander("Failed Command"):
+                            st.code(result['pandas_command'], language='python')
             else:
                 st.error(f"Backend error: {response.status_code}")

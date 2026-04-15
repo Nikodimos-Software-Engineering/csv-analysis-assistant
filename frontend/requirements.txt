@@ -2,4 +2,8 @@ streamlit==1.56.0
 pandas==3.0.1
 requests==2.32.5
 pillow==12.1.1
+<<<<<<< HEAD
 python-dotenv==1.2.2
+=======
+python-dotenv==1.2.2
+>>>>>>> 72dc96fd2452f45734a4f3447c9064e9533eaf8e
